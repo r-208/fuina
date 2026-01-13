@@ -10,6 +10,8 @@ import requests
 import os
 import pytz
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from backend_riego.valves import turn_on, turn_off, get_status
 from backend_riego.scheduler import schedule_valve, schedule_valve_hours
 from backend_riego.logger import log_event
@@ -18,6 +20,16 @@ from backend_riego.logger import log_event
 # APP
 # =========================
 app = FastAPI(title="Sistema de Riego")
+
+# CORS: permitir el frontend en el dominio principal y subdominios
+# Se usa allow_origin_regex para permitir sistemaderiego.online y cualquier subdominio (ej: api.sistemaderiego.online)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https://(.+\.)?sistemaderiego\.online$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =========================
 # MODELOS
