@@ -2,7 +2,7 @@
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import logging
 
@@ -24,7 +24,14 @@ if not logger.handlers:
 # =========================
 # JOBSTORE (persistencia)
 # =========================
-DB_PATH = os.path.expanduser("~/riego-api/jobs.sqlite")
+# DB_PATH configurable vía variable de entorno SCHEDULER_DB
+DEFAULT_DB = os.path.join(os.path.dirname(__file__), "jobs.sqlite")
+DB_PATH = os.environ.get("SCHEDULER_DB", DEFAULT_DB)
+
+# Asegurar que la carpeta exista
+db_dir = os.path.dirname(DB_PATH)
+os.makedirs(db_dir, exist_ok=True)
+
 jobstores = {
     'default': SQLAlchemyJobStore(url=f"sqlite:///{DB_PATH}")
 }
@@ -47,16 +54,17 @@ def schedule_valve(valve_id: int, seconds: int):
     scheduler.add_job(turn_off, 'date', run_date=end_time, args=[valve_id])
     logger.info("Válvula %d programada por %d segundos (%s -> %s)", valve_id, seconds, now, end_time)
 
+
 def schedule_valve_hours(valve_id: int, start_dt: datetime, end_dt: datetime):
     """Programa una válvula para encenderse y apagarse entre start_dt y end_dt"""
     logger.info("Programando válvula %d: %s -> %s", valve_id, start_dt, end_dt)
-    
+
     # Job para encender la válvula
     scheduler.add_job(turn_on, 'date', run_date=start_dt, args=[valve_id], id=f"valve{valve_id}_on_{start_dt.timestamp()}")
-    
+
     # Job para apagar la válvula
     scheduler.add_job(turn_off, 'date', run_date=end_dt, args=[valve_id], id=f"valve{valve_id}_off_{end_dt.timestamp()}")
-    
+
     logger.info("Válvula %d programada en scheduler (on: %s, off: %s)", valve_id, start_dt, end_dt)
 
 # =========================
